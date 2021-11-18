@@ -2,7 +2,7 @@ import { Editor, EditorPosition } from "obsidian";
 import { Section, SnippetResult, TabstopSection } from "./snippet"
 import { evalInContext, evalTemplate } from "./template";
 
-class SnippetExpansion {
+export class SnippetExpansion {
 	editor: Editor;
 	start: EditorPosition;
 	startOffset: number;
@@ -15,7 +15,7 @@ class SnippetExpansion {
 	 * We need this because it's possible that the user would add a gap between the
 	 * numbers.
 	 */
-	tabstopKeys: number[];
+	tabstopKeys: number[] = [];
 
 	/**
 	 * Current tabstop index.
@@ -32,7 +32,7 @@ class SnippetExpansion {
 	/**
 	 * A map of the current tabstop values.
 	 */
-	tabstopValues: { [key: number]: string };
+	tabstopValues: { [key: number]: string } = {};
 
 	_sectionValues: string[];
 	_value: string;
@@ -54,16 +54,26 @@ class SnippetExpansion {
 			}
 		});
 
-		this.tabstopKeys = ((Object.keys(this.tabstopValues) as unknown[]) as number[]).sort();
+		this.tabstopKeys = Object.keys(this.tabstopValues).map(key => parseInt(key));
 
 		// Set the first tabstop
 		this.currentTabstopIndex = 0;
-		this.currentTabstopSectionIndex = this.sections.map((sec: Section) => {
-			return sec.type === 'tabstop' ? sec.index : null
-		}).indexOf(this.tabstopKeys[this.currentTabstopIndex]);
+		const tabIndexMap = this.sections.map((sec: Section) => {
+			return sec.type === 'tabstop' ? sec.index : -1
+		});
+		console.log("tab index map: ", tabIndexMap);
+		this.currentTabstopSectionIndex = tabIndexMap.indexOf(this.tabstopKeys[this.currentTabstopIndex]);
 
 		// Replace the editor with the current value
 		editor.replaceRange(this.value(), this.start, editor.getCursor('head'));
+
+		console.log(`Snip start: ${this.startOffset}`)
+		console.log(this.start);
+
+		console.log(`Tabstop index: ${this.currentTabstopSectionIndex}`);
+		console.log(`Sec start: ${this.sectionStart(this.currentTabstopSectionIndex)}`);
+
+		console.log(this);
 
 		// Move cursor to first tabstop
 		editor.setCursor(this.sectionStart(this.currentTabstopSectionIndex));

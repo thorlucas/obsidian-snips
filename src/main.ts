@@ -1,5 +1,5 @@
 import { App, Editor, EditorPosition, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
-import { Snippet, SnippetLambda, Trigger, snippetLambda } from './snippet';
+import { Snippet, SnippetLambda, Trigger, snippetLambda, SnippetExpansion } from './snippet';
 
 interface MyPluginSettings {
 	mySetting: string;
@@ -68,13 +68,32 @@ export default class MyPlugin extends Plugin {
 	}
 
 	expandTab(editor: Editor) {
-		if (!this.expandSnippets(editor, this.snippets.tab)) {
-			editor.replaceRange("\t", editor.getCursor('head'));
-		}
+		const expansion = new SnippetExpansion({
+			consume: 5,
+			sections: [
+				{
+					type: 'text',
+					text: 'Hi ',
+				},
+				{
+					type: 'tabstop',
+					placeholder: 'world',
+					index: 1,
+				},
+				{
+					type: 'text',
+					text: '!',
+				}
+			]
+		}, editor);
+
+		//if (!this.expandSnippets(editor, this.snippets.tab)) {
+			//editor.replaceRange("\t", editor.getCursor('head'));
+		//}
 	}
 
 	expandAuto(editor: Editor) {
-		this.expandSnippets(editor, this.snippets.auto);
+		//this.expandSnippets(editor, this.snippets.auto);
 	}
 
 	expandSnippets(editor: Editor, snippets: SnippetLambda[]): boolean {
