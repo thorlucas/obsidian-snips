@@ -1,4 +1,4 @@
-import { App, Editor, EditorPosition, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Editor, EditorPosition, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
 import { Snippet, SnippetLambda, Trigger, snippetLambda } from './snippet';
 
 interface MyPluginSettings {
@@ -18,7 +18,7 @@ const DEFAULT_SETTINGS: MyPluginSettings = {
 			template: 'blah'
 		},
 		{
-			trigger: Trigger('([A-Za-z])(\\d)', { word: true, regex: true }),
+			trigger: Trigger('([A-Za-z])(\\d)', { auto: true, word: true, regex: true }),
 			template: '${this.match[1]}_${this.match[2]}'
 		},
 	]
@@ -32,7 +32,10 @@ declare global {
 
 export default class MyPlugin extends Plugin {
 	settings: MyPluginSettings;
-	snippets: SnippetLambda[];
+	snippets: {
+		auto: SnippetLambda[],
+		tab: SnippetLambda[]
+	};
 
 	async onload() {
 		console.log('loading plugin');
@@ -41,22 +44,54 @@ export default class MyPlugin extends Plugin {
 
 		this.addSettingTab(new SampleSettingTab(this.app, this));
 
+		this.snippets = { auto: [], tab: [] };
+		this.settings.snippets
+			.map(snip => { return { lambda: snippetLambda(snip), opts: snip.trigger.opts } })
+			.forEach(snip => {
+				snip.opts.auto
+				? this.snippets.auto.push(snip.lambda)
+				: this.snippets.tab.push(snip.lambda)
+			});
 
-		this.snippets = this.settings.snippets.map(snippet => snippetLambda(snippet));
 
-		this.app.workspace.on('editor-change', (editor: Editor) => {
-			const cursor: EditorPosition = editor.getCursor('head');
-			const line: string = editor.getLine(cursor.line);
-			for (let snip of this.snippets) {
-				let result = snip(line, cursor.ch);
-				if (result) {
-					editor.replaceRange(result.replace, {
-						line: cursor.line,
-						ch: cursor.ch - result.consume,
-					}, cursor);
-				}
-			}
+		this.addCommand({
+			id: 'snip-expand',
+			name: 'Expand Snippet',
+			editorCallback: this.expandTab.bind(this),
+			hotkeys: [{
+				key: 'tab',
+				modifiers: [],
+			}],
 		});
+
+		this.app.workspace.on('editor-change', this.expandAuto.bind(this));
+	}
+
+	expandTab(editor: Editor) {
+		if (!this.expandSnippets(editor, this.snippets.tab)) {
+			editor.replaceRange("\t", editor.getCursor('head'));
+		}
+	}
+
+	expandAuto(editor: Editor) {
+		this.expandSnippets(editor, this.snippets.auto);
+	}
+
+	expandSnippets(editor: Editor, snippets: SnippetLambda[]): boolean {
+		const cursor: EditorPosition = editor.getCursor('head');
+		const line: string = editor.getLine(cursor.line);
+		for (let snip of snippets) {
+			let result = snip(line, cursor.ch);
+			if (result) {
+				editor.replaceRange(result.replace, {
+					line: cursor.line,
+					ch: cursor.ch - result.consume,
+				}, cursor);
+				// TODO: Do we want to recurse snippets?
+				return true;
+			}
+		}
+		return false;
 	}
 
 	onunload() {
