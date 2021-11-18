@@ -20,23 +20,11 @@ type Trigger =
 	| RegexTrigger;
 
 
-type NormalReplace = {
-	type: 'normal',
-	replace: string,
-}
-
-type EvalReplace = {
-	type: 'eval',
-	func: string,
-}
-
-type Replace =
-	| NormalReplace
-	| EvalReplace;
+type Replace = string;
 
 interface Snippet {
 	trigger: Trigger;
-	replace: Replace;
+	template: Replace;
 }
 
 type TriggerMatch = {
@@ -72,34 +60,28 @@ function matchTrigger(trigger: Trigger, line: string, end?: number): TriggerMatc
 }
 
 interface EvalContext {
-	rv: string;
 	match?: RegExpMatchArray;
 }
 
-function evalInContext(func: string) {
-	eval(func);
+function evalInContext(func: string): string {
+	return eval(func);
 }
 
 function expandSnippet(snippet: Snippet, line: string, end?: number): SnippetExpansion | null {
 	const match = matchTrigger(snippet.trigger, line, end);
 	if (match) {
-		switch (snippet.replace.type) {
-			case 'normal':
-				return { length: match.length, replace: snippet.replace.replace };
-			case 'eval':
-				let ctx: EvalContext = { rv: '', match: match.match };
-				evalInContext.call(ctx, snippet.replace.func);
-				return { length: match.length, replace: ctx.rv };
-		}
+		let ctx: EvalContext = { match: match.match };
+		const val = evalInContext.call(ctx, '`'+snippet.template+'`');
+		return { length: match.length, replace: val };
 	}
 }
 
 const DEFAULT_SETTINGS: MyPluginSettings = {
 	mySetting: 'default',
 	snips: [
-		{ trigger: { type: 'normal', trigger: 'foo' },             replace: { type: 'normal', replace: 'bar'  } },
-		{ trigger: { type: 'normal', trigger: 'fizzbuzz' },        replace: { type: 'normal', replace: 'blah' } },
-		{ trigger: { type: 'regex',  regex: /\b([A-Za-z])(\d)$/ }, replace: { type: 'eval', func: "console.log(this); this.rv = `${this.match[1]}_${this.match[2]}`" } },
+		{ trigger: { type: 'normal', trigger: 'foo' },               template: 'bar' },
+		{ trigger: { type: 'normal', trigger: 'fizzbuzz' },          template: 'blah' },
+		{ trigger: { type: 'regex',  regex:   /\b([A-Za-z])(\d)$/ }, template: '${this.match[1]}_${this.match[2]}' },
 	]
 }
 
