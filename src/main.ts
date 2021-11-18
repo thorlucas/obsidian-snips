@@ -5,16 +5,74 @@ interface MyPluginSettings {
 	snips: Snippet[];
 }
 
-interface Snippet {
+type NormalTrigger = {
+	type: 'normal',
 	trigger: string,
+}
+
+type RegexTrigger = {
+	type: 'regex',
+	regex: RegExp,
+}
+
+type Trigger =
+	| NormalTrigger
+	| RegexTrigger;
+
+type TriggerMatch = {
+	length: number,
+	groups?: RegExpMatchArray,
+}
+
+function matchNormalTrigger(trigger: NormalTrigger, line: string, end?: number): TriggerMatch | null {
+	if (line.endsWith(trigger.trigger, end)) {
+		return { length: trigger.trigger.length };
+	}
+}
+
+function matchRegexTrigger(trigger: RegexTrigger, line: string, end?: number): TriggerMatch | null {
+	const found = line.match(trigger.regex);
+	if (found) {
+		return { length: found.first().length };
+	}
+}
+
+
+function matchTrigger(trigger: Trigger, line: string, end?: number): TriggerMatch | null {
+	switch (trigger.type) {
+		case 'normal':
+			return matchNormalTrigger(trigger, line, end);
+		case 'regex':
+			return matchRegexTrigger(trigger, line, end);
+	}
+}
+
+interface Snippet {
+	trigger: Trigger;
+	replace: string;
+}
+
+type SnippetExpansion = {
+	length: number,
 	replace: string,
+}
+
+function expandSnippet(snippet: Snippet, line: string, end?: number): SnippetExpansion | null {
+	const match = matchTrigger(snippet.trigger, line, end);
+	if (match) {
+		return {
+			length: match.length,
+			replace: snippet.replace,
+		}
+	}
 }
 
 const DEFAULT_SETTINGS: MyPluginSettings = {
 	mySetting: 'default',
 	snips: [
-		{ trigger: 'foo', replace: 'bar' },
-		{ trigger: 'fizzbuzz', replace: 'blah' },
+		{ trigger: { type: 'normal', trigger: 'foo' }, replace: 'bar' },
+		{ trigger: { type: 'normal', trigger: 'fizzbuzz' }, replace: 'blah' },
+		{ trigger: { type: 'regex', regex: /\b([A-Za-z])(\d)$/ }, replace: 'az' },
 	]
 }
 
@@ -40,8 +98,9 @@ export default class MyPlugin extends Plugin {
 			const cursor: EditorPosition = editor.getCursor('head');
 			const line: string = editor.getLine(cursor.line);
 			for (let snip of this.settings.snips) {
-				if (line.endsWith(snip.trigger)) {
-					editor.replaceRange(snip.replace, { line: cursor.line, ch: cursor.ch - snip.trigger.length }, cursor, snip.trigger);
+				let exp = expandSnippet(snip, line, cursor.ch);
+				if (exp) {
+					editor.replaceRange(exp.replace, { line: cursor.line, ch: cursor.ch - exp.length }, cursor);
 				}
 			}
 		});
