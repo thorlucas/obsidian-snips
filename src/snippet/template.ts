@@ -1,13 +1,13 @@
 export type Template = string;
 
-export interface TemplateContext {
-	match?: RegExpMatchArray;
-}
-
-function evalInContext(func: string): string {
+function doEval(func: string): string {
 	return eval(func);
 }
 
-export function evalTemplate(template: Template, context: TemplateContext): string {
-	return evalInContext.call(context, '`'+template+'`');
+export function evalTemplate(template: Template, context: any): string {
+	return doEval.call(context, '`'+template+'`');
+}
+
+export function evalInContext(expr: string, context: any): any {
+	return doEval.call(context, expr);
 }
