@@ -1,5 +1,5 @@
 import { App, Editor, EditorPosition, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
-import { Snippet, SnippetLambda, snippetLambda } from './snippet';
+import { Snippet, SnippetLambda, Trigger, snippetLambda } from './snippet';
 
 interface MyPluginSettings {
 	mySetting: string;
@@ -9,9 +9,18 @@ interface MyPluginSettings {
 const DEFAULT_SETTINGS: MyPluginSettings = {
 	mySetting: 'default',
 	snippets: [
-		{ trigger: { type: 'normal', trigger: 'foo' },               template: 'bar' },
-		{ trigger: { type: 'normal', trigger: 'fizzbuzz' },          template: 'blah' },
-		{ trigger: { type: 'regex',  regex:   /\b([A-Za-z])(\d)$/ }, template: '${this.match[1]}_${this.match[2]}' },
+		{
+			trigger: Trigger('foo', { word: true }),
+			template: 'bar',
+		},
+		{
+			trigger: Trigger('fizzbuzz', { auto: true }),
+			template: 'blah'
+		},
+		{
+			trigger: Trigger('([A-Za-z])(\\d)', { word: true, regex: true }),
+			template: '${this.match[1]}_${this.match[2]}'
+		},
 	]
 }
 

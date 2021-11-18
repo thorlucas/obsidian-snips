@@ -1,17 +1,26 @@
+import escapeStringRegexp from 'escape-string-regexp';
+
+export interface TriggerOptions {
+	regex?: boolean; // Use a regex trigger
+	auto?: boolean; // Expand automatically without tab
+	word?: boolean; // Expand only on word boundaries
+}
+
 export type NormalTrigger = {
 	type: 'normal',
 	trigger: string,
+	opts: TriggerOptions,
 };
 
 export type RegexTrigger = {
 	type: 'regex',
 	regex: RegExp,
+	opts: TriggerOptions,
 };
 
 export type Trigger =
 	| NormalTrigger
 	| RegexTrigger;
-
 
 export type Match = {
 	length: number,
@@ -19,6 +28,27 @@ export type Match = {
 }
 
 export type MatchLambda = (line: string, end?: number) => Match | null;
+
+export function Trigger(trigger: string | string, opts?: TriggerOptions): Trigger {
+	// In these conditions, we need to use a regex trigger
+	if (opts.regex || opts.word) {
+		// We assume that if regex is specified, it's already escaped
+		const escaped: string = opts.regex ? trigger : escapeStringRegexp(trigger);
+		const pattern: string = `${opts.word ? '\\b' : ''}${escaped}\$`;
+
+		return {
+			type: 'regex',
+			regex: new RegExp(pattern),
+			opts: opts,
+		}
+	} else {
+		return {
+			type: 'normal',
+			trigger: trigger,
+			opts: opts,
+		}
+	}
+}
 
 export function matchNormalTrigger(trigger: NormalTrigger, line: string, end?: number): Match | null {
 	if (line.endsWith(trigger.trigger, end)) {
