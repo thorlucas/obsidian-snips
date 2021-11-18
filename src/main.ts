@@ -67,7 +67,7 @@ export default class MyPlugin extends Plugin {
 		this.app.workspace.on('editor-change', this.expandAuto.bind(this));
 	}
 
-	expandTab(editor: Editor) {
+	expandTab(editor: Editor, mv: MarkdownView) {
 		const expansion = new SnippetExpansion({
 			consume: 5,
 			sections: [
@@ -85,7 +85,7 @@ export default class MyPlugin extends Plugin {
 					text: '!',
 				}
 			]
-		}, editor);
+		}, editor, mv);
 
 		//if (!this.expandSnippets(editor, this.snippets.tab)) {
 			//editor.replaceRange("\t", editor.getCursor('head'));

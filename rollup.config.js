@@ -39,6 +39,7 @@ export default {
 		copy({
 			targets: [
 				{ src: 'manifest.json', dest: pluginDir },
+				{ src: 'src/styles.css', dest: pluginDir },
 			],
 		}),
 	]
