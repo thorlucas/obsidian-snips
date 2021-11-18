@@ -9,12 +9,41 @@ declare module 'obsidian' {
 	}
 }
 
+type Marker = CodeMirror.TextMarker<CodeMirror.Position>;
+
+type MarkedRange = {
+	expansion: SnippetExpansion,
+	from: Marker,
+	to: Marker,
+}
+
+function getMarkedRange(range: MarkedRange): string {
+	return range.expansion.editor.getRange(
+		range.from.find(),
+		range.to.find(),
+	);
+}
+
+class TabstopExpansion {
+	expansion: SnippetExpansion;
+	source: MarkedRange;
+	destinations: MarkedRange[];
+	value: string;
+
+	constructor(expansion: SnippetExpansion, from: Marker, to: Marker) {
+	}
+}
+
+
+
 type SectionData = {
 	section: Section,
 	value?: string,
 	begin?: CodeMirror.TextMarker<CodeMirror.Position>,
 	end?: CodeMirror.TextMarker<CodeMirror.Position>,
 }
+
+
 
 export class SnippetExpansion {
 	editor: Editor;
@@ -113,34 +142,41 @@ export class SnippetExpansion {
 		if (sec.begin == null || sec.end == null) {
 			// Should create a linked sort of thing
 			// So that if we change one, it changes the others
-			let last_end: CodeMirror.TextMarker<CodeMirror.Position> = this.editor.cm.getDoc().setBookmark(this.start, { widget: this.makeMarkerEl(), insertLeft: true });
-			for (let i = 0; i < this.sections.length; ++i) {
-				let sec = this.sections[i];
-				let start = last_end;
-				let offset = this.editor.posToOffset(last_end.find()) + this.sectionValue(sec).length;
-				let end = this.editor.cm.getDoc().setBookmark(this.editor.offsetToPos(offset), { widget: this.makeMarkerEl(), insertLeft: true });
+			let start_offset: number = this.startOffset;
+			//for (let i = 0; i < this.sections.length; ++i) {
+				//let sec = this.sections[i];
 
-				sec.begin = start;
-				sec.end = end;
+				//let start =  this.editor.cm.getDoc().setBookmark(this.editor.offsetToPos(start_offset), { widget: this.makeMarkerEl(), insertLeft: false });
 
-				last_end = end;
-			}
+				//let end_offset = start_offset + this.sectionValue(sec).length;
+				//let end = this.editor.cm.getDoc().setBookmark(this.editor.offsetToPos(end_offset), { widget: this.makeMarkerEl(), insertLeft: true });
+
+				//sec.begin = start;
+				//sec.end = end;
+
+				//start_offset = end_offset;
+			//}
+
+			const doc = this.editor.cm.getDoc();
+			doc.setBookmark(this.editor.offsetToPos(start_offset), { widget: this.makeMarkerEl() });
+			doc.setBookmark(this.editor.offsetToPos(start_offset + 3), { widget: this.makeMarkerEl(), insertLeft: false});
+			doc.setBookmark(this.editor.offsetToPos(start_offset + 8), { widget: this.makeMarkerEl(), insertLeft: true});
+			doc.setBookmark(this.editor.offsetToPos(start_offset + 12), { widget: this.makeMarkerEl()});
 		}
 		// TODO: Check if the lengths are correct
 
-		let range = {
-			from: sec.begin.find(),
-			to: sec.end.find(),
-		};
+		//let range = {
+			//from: sec.begin.find(),
+			//to: sec.end.find(),
+		//};
 
-		console.log(range.from, ' - ', range.to);
-
-		return range;
+		//return range;
+		return null;
 	}
 
 	update(cm: CodeMirror.Editor, change: CodeMirror.EditorChange) {
 		let range = this.sectionRange(this.tabstop.current);
-		console.log(range.from, ' - ', range.to);
+		console.log(this.editor.getRange(range.from, range.to));
 	}
 
 	makeMarkerEl(): HTMLElement {
