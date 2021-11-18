@@ -1,11 +1,27 @@
-import { App, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Editor, EditorPosition, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
 
 interface MyPluginSettings {
 	mySetting: string;
+	snips: Snippet[];
+}
+
+interface Snippet {
+	trigger: string,
+	replace: string,
 }
 
 const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
+	mySetting: 'default',
+	snips: [
+		{ trigger: 'foo', replace: 'bar' },
+		{ trigger: 'fizzbuzz', replace: 'blah' },
+	]
+}
+
+declare global {
+	interface Window {
+		workspace: any;
+	}
 }
 
 export default class MyPlugin extends Plugin {
@@ -16,45 +32,24 @@ export default class MyPlugin extends Plugin {
 
 		await this.loadSettings();
 
-		this.addRibbonIcon('dice', 'Sample Plugin', () => {
-			new Notice('This is a notice!');
-		});
-
-		this.addStatusBarItem().setText('Status Bar Text');
-
-		this.addCommand({
-			id: 'open-sample-modal',
-			name: 'Open Sample Modal',
-			// callback: () => {
-			// 	console.log('Simple Callback');
-			// },
-			checkCallback: (checking: boolean) => {
-				let leaf = this.app.workspace.activeLeaf;
-				if (leaf) {
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-					return true;
-				}
-				return false;
-			}
-		});
-
 		this.addSettingTab(new SampleSettingTab(this.app, this));
 
-		this.registerCodeMirror((cm: CodeMirror.Editor) => {
-			console.log('codemirror', cm);
-		});
+		window.workspace = this.app.workspace;
 
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
+		this.app.workspace.on('editor-change', (editor: Editor, markdownView: MarkdownView) => {
+			const cursor: EditorPosition = editor.getCursor('head');
+			const line: string = editor.getLine(cursor.line);
+			for (let snip of this.settings.snips) {
+				if (line.endsWith(snip.trigger)) {
+					editor.replaceRange(snip.replace, { line: cursor.line, ch: cursor.ch - snip.trigger.length }, cursor, snip.trigger);
+				}
+			}
 		});
-
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
 	}
 
 	onunload() {
 		console.log('unloading plugin');
+		
 	}
 
 	async loadSettings() {
@@ -63,22 +58,6 @@ export default class MyPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
-	}
-}
-
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
-
-	onOpen() {
-		let {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		let {contentEl} = this;
-		contentEl.empty();
 	}
 }
 
@@ -110,3 +89,7 @@ class SampleSettingTab extends PluginSettingTab {
 				}));
 	}
 }
+function EditorPosition(EditorPosition: any, arg1: void) {
+    throw new Error('Function not implemented.');
+}
+
