@@ -1,3 +1,3 @@
 export { Template, evalTemplate } from './template';
-export { Trigger, matchTrigger } from './trigger';
-export { Snippet, expandSnippet } from './snippet';
+export { Trigger, matchTrigger, MatchLambda, matchLambda } from './trigger';
+export { Snippet, expandSnippet, SnippetLambda, snippetLambda } from './snippet';

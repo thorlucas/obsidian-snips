@@ -1,14 +1,14 @@
 import { App, Editor, EditorPosition, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
-import { expandSnippet, Snippet } from './snippet';
+import { Snippet, SnippetLambda, snippetLambda } from './snippet';
 
 interface MyPluginSettings {
 	mySetting: string;
-	snips: Snippet[];
+	snippets: Snippet[];
 }
 
 const DEFAULT_SETTINGS: MyPluginSettings = {
 	mySetting: 'default',
-	snips: [
+	snippets: [
 		{ trigger: { type: 'normal', trigger: 'foo' },               template: 'bar' },
 		{ trigger: { type: 'normal', trigger: 'fizzbuzz' },          template: 'blah' },
 		{ trigger: { type: 'regex',  regex:   /\b([A-Za-z])(\d)$/ }, template: '${this.match[1]}_${this.match[2]}' },
@@ -23,6 +23,7 @@ declare global {
 
 export default class MyPlugin extends Plugin {
 	settings: MyPluginSettings;
+	snippets: SnippetLambda[];
 
 	async onload() {
 		console.log('loading plugin');
@@ -31,13 +32,14 @@ export default class MyPlugin extends Plugin {
 
 		this.addSettingTab(new SampleSettingTab(this.app, this));
 
-		window.workspace = this.app.workspace;
+
+		this.snippets = this.settings.snippets.map(snippet => snippetLambda(snippet));
 
 		this.app.workspace.on('editor-change', (editor: Editor) => {
 			const cursor: EditorPosition = editor.getCursor('head');
 			const line: string = editor.getLine(cursor.line);
-			for (let snip of this.settings.snips) {
-				let result = expandSnippet(snip, line, cursor.ch);
+			for (let snip of this.snippets) {
+				let result = snip(line, cursor.ch);
 				if (result) {
 					editor.replaceRange(result.replace, {
 						line: cursor.line,
