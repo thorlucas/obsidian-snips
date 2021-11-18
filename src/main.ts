@@ -19,9 +19,34 @@ type Trigger =
 	| NormalTrigger
 	| RegexTrigger;
 
+
+type NormalReplace = {
+	type: 'normal',
+	replace: string,
+}
+
+type EvalReplace = {
+	type: 'eval',
+	func: string,
+}
+
+type Replace =
+	| NormalReplace
+	| EvalReplace;
+
+interface Snippet {
+	trigger: Trigger;
+	replace: Replace;
+}
+
 type TriggerMatch = {
 	length: number,
-	groups?: RegExpMatchArray,
+	match?: RegExpMatchArray,
+}
+
+type SnippetExpansion = {
+	length: number,
+	replace: string,
 }
 
 function matchNormalTrigger(trigger: NormalTrigger, line: string, end?: number): TriggerMatch | null {
@@ -31,12 +56,11 @@ function matchNormalTrigger(trigger: NormalTrigger, line: string, end?: number):
 }
 
 function matchRegexTrigger(trigger: RegexTrigger, line: string, end?: number): TriggerMatch | null {
-	const found = line.match(trigger.regex);
+	const found = line.slice(0, end).match(trigger.regex);
 	if (found) {
-		return { length: found.first().length };
+		return { length: found.first().length, match: found };
 	}
 }
-
 
 function matchTrigger(trigger: Trigger, line: string, end?: number): TriggerMatch | null {
 	switch (trigger.type) {
@@ -47,22 +71,25 @@ function matchTrigger(trigger: Trigger, line: string, end?: number): TriggerMatc
 	}
 }
 
-interface Snippet {
-	trigger: Trigger;
-	replace: string;
+interface EvalContext {
+	rv: string;
+	match?: RegExpMatchArray;
 }
 
-type SnippetExpansion = {
-	length: number,
-	replace: string,
+function evalInContext(func: string) {
+	eval(func);
 }
 
 function expandSnippet(snippet: Snippet, line: string, end?: number): SnippetExpansion | null {
 	const match = matchTrigger(snippet.trigger, line, end);
 	if (match) {
-		return {
-			length: match.length,
-			replace: snippet.replace,
+		switch (snippet.replace.type) {
+			case 'normal':
+				return { length: match.length, replace: snippet.replace.replace };
+			case 'eval':
+				let ctx: EvalContext = { rv: '', match: match.match };
+				evalInContext.call(ctx, snippet.replace.func);
+				return { length: match.length, replace: ctx.rv };
 		}
 	}
 }
@@ -70,9 +97,9 @@ function expandSnippet(snippet: Snippet, line: string, end?: number): SnippetExp
 const DEFAULT_SETTINGS: MyPluginSettings = {
 	mySetting: 'default',
 	snips: [
-		{ trigger: { type: 'normal', trigger: 'foo' }, replace: 'bar' },
-		{ trigger: { type: 'normal', trigger: 'fizzbuzz' }, replace: 'blah' },
-		{ trigger: { type: 'regex', regex: /\b([A-Za-z])(\d)$/ }, replace: 'az' },
+		{ trigger: { type: 'normal', trigger: 'foo' },             replace: { type: 'normal', replace: 'bar'  } },
+		{ trigger: { type: 'normal', trigger: 'fizzbuzz' },        replace: { type: 'normal', replace: 'blah' } },
+		{ trigger: { type: 'regex',  regex: /\b([A-Za-z])(\d)$/ }, replace: { type: 'eval', func: "console.log(this); this.rv = `${this.match[1]}_${this.match[2]}`" } },
 	]
 }
 
