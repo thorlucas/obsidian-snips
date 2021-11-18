@@ -1,79 +1,9 @@
 import { App, Editor, EditorPosition, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { expandSnippet, Snippet } from './snippet';
 
 interface MyPluginSettings {
 	mySetting: string;
 	snips: Snippet[];
-}
-
-type NormalTrigger = {
-	type: 'normal',
-	trigger: string,
-}
-
-type RegexTrigger = {
-	type: 'regex',
-	regex: RegExp,
-}
-
-type Trigger =
-	| NormalTrigger
-	| RegexTrigger;
-
-
-type Replace = string;
-
-interface Snippet {
-	trigger: Trigger;
-	template: Replace;
-}
-
-type TriggerMatch = {
-	length: number,
-	match?: RegExpMatchArray,
-}
-
-type SnippetExpansion = {
-	length: number,
-	replace: string,
-}
-
-function matchNormalTrigger(trigger: NormalTrigger, line: string, end?: number): TriggerMatch | null {
-	if (line.endsWith(trigger.trigger, end)) {
-		return { length: trigger.trigger.length };
-	}
-}
-
-function matchRegexTrigger(trigger: RegexTrigger, line: string, end?: number): TriggerMatch | null {
-	const found = line.slice(0, end).match(trigger.regex);
-	if (found) {
-		return { length: found.first().length, match: found };
-	}
-}
-
-function matchTrigger(trigger: Trigger, line: string, end?: number): TriggerMatch | null {
-	switch (trigger.type) {
-		case 'normal':
-			return matchNormalTrigger(trigger, line, end);
-		case 'regex':
-			return matchRegexTrigger(trigger, line, end);
-	}
-}
-
-interface EvalContext {
-	match?: RegExpMatchArray;
-}
-
-function evalInContext(func: string): string {
-	return eval(func);
-}
-
-function expandSnippet(snippet: Snippet, line: string, end?: number): SnippetExpansion | null {
-	const match = matchTrigger(snippet.trigger, line, end);
-	if (match) {
-		let ctx: EvalContext = { match: match.match };
-		const val = evalInContext.call(ctx, '`'+snippet.template+'`');
-		return { length: match.length, replace: val };
-	}
 }
 
 const DEFAULT_SETTINGS: MyPluginSettings = {
@@ -103,13 +33,16 @@ export default class MyPlugin extends Plugin {
 
 		window.workspace = this.app.workspace;
 
-		this.app.workspace.on('editor-change', (editor: Editor, markdownView: MarkdownView) => {
+		this.app.workspace.on('editor-change', (editor: Editor) => {
 			const cursor: EditorPosition = editor.getCursor('head');
 			const line: string = editor.getLine(cursor.line);
 			for (let snip of this.settings.snips) {
-				let exp = expandSnippet(snip, line, cursor.ch);
-				if (exp) {
-					editor.replaceRange(exp.replace, { line: cursor.line, ch: cursor.ch - exp.length }, cursor);
+				let result = expandSnippet(snip, line, cursor.ch);
+				if (result) {
+					editor.replaceRange(result.replace, {
+						line: cursor.line,
+						ch: cursor.ch - result.consume,
+					}, cursor);
 				}
 			}
 		});
