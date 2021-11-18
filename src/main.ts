@@ -9,18 +9,18 @@ interface MyPluginSettings {
 const DEFAULT_SETTINGS: MyPluginSettings = {
 	mySetting: 'default',
 	snippets: [
-		{
-			trigger: Trigger('foo', { word: true }),
-			template: 'bar',
-		},
-		{
-			trigger: Trigger('fizzbuzz', { auto: true }),
-			template: 'blah'
-		},
-		{
-			trigger: Trigger('([A-Za-z])(\\d)', { auto: true, word: true, regex: true }),
-			template: '${this.match[1]}_${this.match[2]}'
-		},
+		//{
+			//trigger: Trigger('foo', { word: true }),
+			//sections: 'bar',
+		//},
+		//{
+			//trigger: Trigger('fizzbuzz', { auto: true }),
+			//sections: 'blah'
+		//},
+		//{
+			//trigger: Trigger('([A-Za-z])(\\d)', { auto: true, word: true, regex: true }),
+			//sections: '${this.match[1]}_${this.match[2]}'
+		//},
 	]
 }
 
@@ -78,19 +78,19 @@ export default class MyPlugin extends Plugin {
 	}
 
 	expandSnippets(editor: Editor, snippets: SnippetLambda[]): boolean {
-		const cursor: EditorPosition = editor.getCursor('head');
-		const line: string = editor.getLine(cursor.line);
-		for (let snip of snippets) {
-			let result = snip(line, cursor.ch);
-			if (result) {
-				editor.replaceRange(result.replace, {
-					line: cursor.line,
-					ch: cursor.ch - result.consume,
-				}, cursor);
-				// TODO: Do we want to recurse snippets?
-				return true;
-			}
-		}
+		//const cursor: EditorPosition = editor.getCursor('head');
+		//const line: string = editor.getLine(cursor.line);
+		//for (let snip of snippets) {
+			//let result = snip(line, cursor.ch);
+			//if (result) {
+				//editor.replaceRange(result.replace, {
+					//line: cursor.line,
+					//ch: cursor.ch - result.consume,
+				//}, cursor);
+				//// TODO: Do we want to recurse snippets?
+				//return true;
+			//}
+		//}
 		return false;
 	}
 
